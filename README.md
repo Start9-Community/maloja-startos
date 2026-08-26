@@ -85,7 +85,11 @@ is overwritten the next time the service starts. Rotate it with the action inste
 
 Maloja's own `settings.ini` has no model and is never written by this package. Every
 setting in it belongs to the user, and a hand edit — or a change made through Maloja's
-settings UI — survives indefinitely.
+settings UI — survives indefinitely. The optional Last.fm and TheAudioDB keys Maloja logs
+as missing on every start live there: they fetch artist and album artwork, nothing more,
+and they are the user's own accounts with those services. No action offers them, because
+an action would mean StartOS re-asserting `settings.ini` over whatever the user set in
+Maloja's own settings page.
 
 ## Dependencies
 
@@ -102,6 +106,14 @@ A single web interface serves both the dashboard and Maloja's REST API.
 Maloja itself only ever speaks plain HTTP on 42010; TLS is terminated by StartOS in front
 of it. Scrobble clients authenticate with an API key generated from Maloja's own Admin
 Panel, which is unrelated to the StartOS-managed admin password.
+
+**Only the admin pages are behind the password.** Maloja routes every page whose name
+begins with `admin` through its login check and serves everything else — the dashboard,
+the charts, the artist and album pages, the scrobble list — to anyone who asks. The read
+half of the API is ungated the same way, so `GET /apis/mlj_1/scrobbles` returns the full
+listening history without credentials, while the mutating endpoints answer `403`. That is
+upstream's design and this package does not narrow it, but it decides which addresses are
+safe to enable: anyone who can reach this interface can read what you have listened to.
 
 ## Installation and First-Run Flow
 

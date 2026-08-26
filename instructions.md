@@ -14,6 +14,10 @@ included in StartOS backups.
 Your admin password is generated for you rather than chosen during Maloja's own setup
 wizard, and is re-applied every time the service starts.
 
+Only the admin pages ask for that password. Your charts, statistics and scrobble history
+are visible to anyone who can open the address — that is how Maloja is built, so treat the
+addresses you enable as the thing that controls who can see what you listen to.
+
 ## Getting set up
 
 1. Run the **Set Admin Password** action. You will be prompted for this as a required task
@@ -30,6 +34,11 @@ wizard, and is re-applied every time the service starts.
 Your charts, statistics, and admin settings all live here. Turning on admin mode adds the
 pages for editing artist associations, uploading custom images, managing scrobble rules,
 and exporting your data.
+
+Maloja notes on every start that it has no Last.fm or TheAudioDB key. Those are optional
+and only affect whether it can fetch artist and album artwork from those services — with
+neither, it shows the images you upload yourself. If you want them, sign up with the
+service and paste the key into Maloja's own **Settings** page in admin mode.
 
 ### Actions
 
