@@ -4,13 +4,13 @@
 
 # Maloja on StartOS
 
-> **Upstream docs:** <https://github.com/krateng/maloja#readme>
->
 > Everything not listed in this document should behave the same as upstream
 > Maloja. If a feature, setting, or behavior is not mentioned here, the
-> upstream documentation is accurate and fully applicable.
+> upstream documentation is accurate and fully applicable — see the
+> Documentation section of `instructions.md` for links.
 
-[Maloja](https://github.com/krateng/maloja) is a self-hosted music scrobble database that turns your listening history into personal charts and statistics.
+[Maloja](https://github.com/krateng/maloja) is a self-hosted music scrobble database that
+turns your listening history into personal charts and statistics.
 
 ---
 
@@ -18,87 +18,170 @@
 
 - [Image and Container Runtime](#image-and-container-runtime)
 - [Volume and Data Layout](#volume-and-data-layout)
-- [Installation and First-Run Flow](#installation-and-first-run-flow)
-- [Configuration Management](#configuration-management)
-- [Network Access and Interfaces](#network-access-and-interfaces)
-- [Actions (StartOS UI)](#actions-startos-ui)
-- [Backups and Restore](#backups-and-restore)
-- [Health Checks](#health-checks)
+- [File Models](#file-models)
 - [Dependencies](#dependencies)
+- [Network Access and Interfaces](#network-access-and-interfaces)
+- [Installation and First-Run Flow](#installation-and-first-run-flow)
+- [Actions](#actions)
+- [Tasks](#tasks)
+- [Health Checks](#health-checks)
+- [Backups and Restore](#backups-and-restore)
 - [Limitations and Differences](#limitations-and-differences)
-- [What Is Unchanged from Upstream](#what-is-unchanged-from-upstream)
-- [Contributing](#contributing)
 - [Quick Reference for AI Consumers](#quick-reference-for-ai-consumers)
 
 ---
 
 ## Image and Container Runtime
 
-Upstream `krateng/maloja` image, unmodified. Architectures: x86_64, aarch64.
+The upstream `krateng/maloja` image is used unmodified, for `x86_64` and `aarch64`.
 
-The image is built on `lsiobase/alpine` (linuxserver.io's s6-overlay base), so `startos/main.ts` runs the image's own entrypoint (`sdk.useEntrypoint()`) with `runAsInit: true` — s6-overlay must be PID 1.
+It is built on `lsiobase/alpine` — linuxserver.io's s6-overlay base — whose `/init`
+entrypoint must run as PID 1, so the daemon execs the image's own entrypoint rather than
+the application directly. The single subcontainer is named `maloja-sub`; attach to it to
+inspect the database or read Maloja's own logs.
+
+Two temporary subcontainers, `maloja-import` and `maloja-wipe`, are created on demand by
+the actions of the same name and torn down when the action returns. Neither is running
+between action invocations.
 
 ## Volume and Data Layout
 
-- Volume `main`, mounted at `/data` (`MALOJA_DATA_DIRECTORY=/data`). Holds all Maloja config, database, and image cache.
-- `store.json` on the `main` volume holds the StartOS-generated `adminPassword` (not read by Maloja directly — see below).
+One volume holds everything, and Maloja lays the rest of its tree out beneath it.
 
-## Installation and First-Run Flow
+| Volume | Mount point | Contents                                                    |
+| ------ | ----------- | ----------------------------------------------------------- |
+| `main` | `/data`     | Maloja's entire data directory, plus StartOS's `store.json` |
 
-`MALOJA_SKIP_SETUP` is already the image default, so Maloja's interactive first-run wizard never triggers. No admin password is set until the user runs the **Set Admin Password** action; a critical task prompts for this on install.
+`MALOJA_DATA_DIRECTORY=/data` collapses Maloja's config, state, cache, and log roots onto
+that one path. Within it:
 
-## Configuration Management
+| Path                 | What it holds                                    |
+| -------------------- | ------------------------------------------------ |
+| `malojadb.sqlite`    | every scrobble, track, artist, and album         |
+| `auth/auth.sqlite`   | the admin login                                  |
+| `apikeys.yml`        | the API keys scrobble clients authenticate with  |
+| `settings.ini`       | Maloja's own settings, editable from its web UI  |
+| `rules/`, `images/`  | scrobble rules and custom artwork                |
+| `cache/`, `logs/`    | image cache and Maloja's logs                    |
+| `store.json`         | StartOS-side state — see [File Models](#file-models) |
 
-| StartOS-Managed                         | Upstream-Managed                                     |
-| ---------------------------------------- | ------------------------------------------------------ |
-| Admin password (`Set Admin Password` action) | Everything else — scrobble rules, associated artists, custom images, `settings.ini` under `/data`, configurable via Maloja's own web UI/API |
+The scrobble database and the login database are separate files, which is what lets
+**Wipe Scrobble Database** clear listening history without disturbing credentials.
 
-The admin password is applied via `MALOJA_FORCE_PASSWORD`, which Maloja's own `setup()` routine re-applies (via its internal `auth.change_pw()`) on **every** container start when the env var is set — not just first run. `startos/main.ts` reads the stored password reactively (`storeJson.read(s => s.adminPassword).const(effects)`) and restarts the daemon when it changes, so rotating the password via the action takes effect automatically.
+## File Models
 
-## Network Access and Interfaces
+One model, and it holds StartOS state rather than upstream configuration.
 
-| Interface | Port  | Protocol | Purpose               |
-| --------- | ----- | -------- | ---------------------- |
-| `ui`      | 42010 | HTTP     | Maloja web interface   |
+`store.json`, at `/data/store.json`, holds a single key: `adminPassword`, the password
+**Set Admin Password** generates. Nothing seeds it at install — it stays absent until that
+action runs, which is what the critical task in [Tasks](#tasks) is waiting on. Only that
+action writes it; nothing rewrites it on start, so the value survives restarts, upgrades,
+and restores untouched.
 
-`interfaces.ts` declares `protocol: 'http'`, but the SDK's `MultiHost.bindPort` auto-upgrades any protocol with a `withSsl` variant (`http` → `https`) unless `noAddSsl`/`addSsl: null` is explicitly passed — so StartOS still wraps the LAN address in HTTPS with its own self-signed cert. Maloja itself never terminates TLS; it only ever speaks plain HTTP (waitress) on 42010.
+Maloja reads none of this file. The daemon takes the password as `MALOJA_FORCE_PASSWORD`,
+which Maloja re-applies to `auth/auth.sqlite` on **every** start, not just the first. That
+is the one key StartOS owns and re-asserts: a password changed inside Maloja's own web UI
+is overwritten the next time the service starts. Rotate it with the action instead.
 
-This is invisible to browser users (StartOS's login flow walks them through trusting its root CA), but it breaks headless, non-browser clients that connect directly — e.g. [multi-scrobbler](https://github.com/FoxxMD/multi-scrobbler) or any other scrobbling client run outside StartOS. Such a client needs StartOS's root CA (`https://<lan-address>/static/local-root-ca.crt`) added to its own trust store — see `instructions.md`'s "Connecting external scrobbler clients" section for the concrete steps (a Node client, for example, needs the cert mounted in *and* `NODE_EXTRA_CA_CERTS` set — trusting the cert on the host OS doesn't extend into an isolated Docker container). This is a StartOS platform behavior affecting every package's LAN interface, not something specific to this package's config.
-
-A StartOS-native package for a scrobbler client wouldn't hit this at all: same-instance dependencies resolve each other's internal (non-TLS, non-proxied) address via `effects.getServiceInterface`/`effects.getHostInfo` rather than the public LAN interface, so there's no cert involved for that path.
-
-## Actions (StartOS UI)
-
-- **Set Admin Password** (`set-admin-password`) — generates a new random password, stores it, and returns it. Available any time (`allowedStatuses: 'any'`); also surfaced as a critical install task until first set.
-- **Import Scrobbles** (`import-scrobbles`) — takes the pasted contents of a `maloja_export_*.json` file (from another Maloja instance's Admin Panel → Export) and runs the upstream `maloja import` CLI against it in a temporary subcontainer sharing the `main` volume. Requires the service to be stopped (`allowedStatuses: 'only-stopped'`), since Maloja's own web UI has no file-upload import path — only identifier-based third-party auto-import and the CLI support importing an export file.
-  - **Paste, not upload:** the SDK's `Value.file` action-input type (proper file upload) does not currently complete its upload handshake in the StartOS web UI as of `osVersion 0.4.0-beta.10` / `sdkVersion 2.0.1` — confirmed via both drag-and-drop and the native file picker, both submitting an empty `{}` for the field. Filed as a bug candidate upstream; this action uses a `Value.textarea` paste field as a workaround.
-  - **Size limitation:** because the whole file must be pasted as text, this does not scale to very large libraries (a few hundred thousand scrobbles can be well over 100 MB of pretty-printed JSON) — browsers and the RPC layer may struggle with pastes that large. Switch this action back to `Value.file` once the upstream upload bug is fixed.
-  - The staged copy is always named `maloja_export_import.json` to match Maloja's own `maloja_export[_0-9]*.json` filename-based format detection. This scopes the action to Maloja-native exports only — Last.fm/Spotify/ListenBrainz/Rockbox imports, which upstream also detects by original filename, are not reachable through pasted content (no filename to detect from) and are not supported through this action.
-- **Wipe Scrobble Database** (`wipe-scrobbles`) — deletes `malojadb.sqlite` (plus any `-wal`/`-shm` sidecar files) from the `main` volume in a temporary subcontainer, the same pattern as Import Scrobbles. Maloja keeps all scrobbles, tracks, artists, and albums in this single SQLite file, separate from `auth.sqlite` (admin login), `settings.ini`, scrobble rules, and custom images — so this wipes listening history without touching credentials or configuration. Maloja recreates an empty database automatically on next start. Requires the service to be stopped (`allowedStatuses: 'only-stopped'`) to avoid deleting a file Maloja has open. No confirmation input beyond the action's `warning` text (matching this package's existing destructive-action pattern) — there is no undo, so the warning points users at Maloja's own Export button first.
-
-## Backups and Restore
-
-The `main` volume (all Maloja data, including `store.json`) is backed up in full. Restoring reapplies the stored admin password on next start.
-
-## Health Checks
-
-Daemon readiness checks that port 42010 is listening (`sdk.healthCheck.checkPortListening`). No standalone health checks.
+Maloja's own `settings.ini` has no model and is never written by this package. Every
+setting in it belongs to the user, and a hand edit — or a change made through Maloja's
+settings UI — survives indefinitely.
 
 ## Dependencies
 
 None.
 
+## Network Access and Interfaces
+
+A single web interface serves both the dashboard and Maloja's REST API.
+
+| Interface | Id   | Type | Port  | Protocol | Purpose                                        |
+| --------- | ---- | ---- | ----- | -------- | ---------------------------------------------- |
+| Web Interface | `ui` | ui | 42010 | HTTP     | charts, statistics, admin panel, and the API scrobble clients post to |
+
+Maloja itself only ever speaks plain HTTP on 42010; TLS is terminated by StartOS in front
+of it. Scrobble clients authenticate with an API key generated from Maloja's own Admin
+Panel, which is unrelated to the StartOS-managed admin password.
+
+## Installation and First-Run Flow
+
+Setup differs from upstream in one way: the interactive first-run wizard never appears.
+
+The image sets `MALOJA_SKIP_SETUP`, so Maloja starts non-interactively and would otherwise
+come up with its built-in default password. This package holds the service on a critical
+task instead until **Set Admin Password** has generated one — see [Tasks](#tasks). No other
+setting is pre-configured, and nothing is written into Maloja's own config.
+
+## Actions
+
+Three actions: one credential, one migration, one destructive reset.
+
+- **Set Admin Password** (`set-admin-password`) — run it once on install, when the critical
+  task asks for it, and again whenever you want to rotate the password. Writes only
+  `adminPassword` in `store.json`; the new value reaches Maloja on the next start, so the
+  daemon restarts to apply it. Returns the generated password, which is the only time it is
+  displayed — StartOS does not store a second copy you can read back. Safe to re-run, but
+  each run invalidates the previous password.
+
+- **Import Scrobbles** (`import-scrobbles`) — run it when migrating from another Maloja
+  instance. Takes the pasted contents of that instance's export file, stages it in a
+  temporary subcontainer sharing the `main` volume, and runs Maloja's own `import` against
+  it, returning the importer's output verbatim. Duration scales with the export; a small
+  library is seconds, a large one minutes. Maloja de-duplicates on import, so re-running with
+  the same export adds nothing — but the action accepts only Maloja's own export format, not
+  Last.fm, Spotify, ListenBrainz, or Rockbox exports, which upstream detects by their original
+  filename and which pasted text therefore cannot carry.
+
+- **Wipe Scrobble Database** (`wipe-scrobbles`) — run it to start over with an empty
+  library. Deletes `malojadb.sqlite` and its write-ahead sidecars from the `main` volume, in
+  a temporary subcontainer, then leaves Maloja to recreate an empty database on the next
+  start. Instant, irreversible, and there is no confirmation beyond the action's own warning.
+  The admin password, API keys, scrobble rules, and custom artwork are untouched.
+
+## Tasks
+
+One task, raised on install and cleared by setting a password.
+
+- **Set Admin Password** — `critical`. Raised whenever `store.json` carries no
+  `adminPassword`, which on a fresh install is immediately. Because it is critical, the
+  service is held from starting and the ordinary Start/Stop controls are replaced by the
+  task itself until it is satisfied. Running the action clears it. It can return: it is
+  re-evaluated on every init, so wiping the volume or restoring a backup taken before the
+  password was set raises it again.
+
+## Health Checks
+
+One check, on the daemon.
+
+- **`maloja`** — succeeds once port 42010 accepts a connection. Maloja opens its listener
+  after its database migrations and start-up cleanup have run, so on a large library the
+  check can sit in its grace period for a while before turning green; that is a slow start,
+  not a fault. A check that stays red past that means the process never bound the port —
+  read the subcontainer's logs for a database or permissions error rather than looking at
+  the network.
+
+## Backups and Restore
+
+The whole of the `main` volume is copied wholesale — `sdk.Backups.ofVolumes`, no database
+dump involved — so the scrobble database, the login database, `settings.ini`, rules,
+artwork, and `store.json` all travel together, byte for byte.
+
+Nothing is deliberately excluded, and a restored instance needs no further setup: because
+`store.json` comes back with it, the admin password is re-applied on the first start and
+the credential you already have keeps working.
+
 ## Limitations and Differences
 
-1. The admin password is generated and managed by StartOS via the **Set Admin Password** action rather than Maloja's interactive first-run prompt.
-
-## What Is Unchanged from Upstream
-
-Everything else — scrobbling, charts, associated artists, custom images, proxy scrobbling, the API, and all `settings.ini` options — behaves exactly as documented upstream.
-
-## Contributing
-
-See [AGENTS.md](./AGENTS.md).
+1. The admin password is generated by StartOS and re-applied on every start. Changing it
+   inside Maloja's own web UI does not stick — use **Set Admin Password**.
+2. **Import Scrobbles** takes pasted text rather than an uploaded file, so an export beyond
+   roughly a few tens of megabytes is impractical to submit. A library of hundreds of
+   thousands of scrobbles falls in that range.
+3. A scrobble client running outside StartOS reaches the web interface over a
+   StartOS-issued certificate its trust store does not recognise, and most non-browser HTTP
+   libraries refuse the connection rather than prompting. `instructions.md` covers adding
+   the certificate to such a client. Clients running as StartOS services are unaffected —
+   they reach Maloja over the internal bridge, with no TLS in the path.
 
 ---
 
@@ -106,17 +189,25 @@ See [AGENTS.md](./AGENTS.md).
 
 ```yaml
 package_id: maloja
+image: krateng/maloja
 architectures: [x86_64, aarch64]
+subcontainers: [maloja-sub, maloja-import, maloja-wipe]
 volumes:
   main: /data
-ports:
-  ui: 42010
-dependencies: none
+file_models:
+  - store.json
 startos_managed_env_vars:
   - MALOJA_DATA_DIRECTORY
   - MALOJA_FORCE_PASSWORD
+dependencies: none
+interfaces:
+  ui: { type: ui, port: 42010 }
 actions:
   - set-admin-password
   - import-scrobbles
   - wipe-scrobbles
+tasks:
+  - { action: set-admin-password, severity: critical }
+health_checks:
+  - maloja
 ```

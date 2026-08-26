@@ -11,6 +11,6 @@ Upstream is the `krateng/maloja` Docker image, pinned by tag in `startos/manifes
 
 ## Applying the bump
 
-1. Edit `images.maloja.source.dockerTag` in `startos/manifest/index.ts` to the new `krateng/maloja:<tag>`. Update the confirmation-date comment above it.
+1. Edit `images.maloja.source.dockerTag` in `startos/manifest/index.ts` to the new `krateng/maloja:<tag>`.
 2. Bump `startos/versions/current.ts` (or add a new version file if the bump needs a migration — see `versions.md`).
-3. Rebuild (`start-cli s9pk pack`), install, and verify the web interface still loads and logs in with the existing admin password (no `MALOJA_FORCE_PASSWORD` regression).
+3. Rebuild (`make`), install, and verify the web interface still loads and logs in with the existing admin password (no `MALOJA_FORCE_PASSWORD` regression).

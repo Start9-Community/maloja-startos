@@ -76,7 +76,7 @@ export default {
     2: "L'interface web n'est pas prête",
     3: "L'interface web de Maloja",
     4: 'Définir le mot de passe administrateur',
-    5: "Génère un nouveau mot de passe aléatoire pour le backend web de Maloja. Remplace tout mot de passe existant.",
+    5: 'Génère un nouveau mot de passe aléatoire pour le backend web de Maloja. Remplace tout mot de passe existant.',
     6: 'Identifiants de connexion',
     7: 'Utilisez ce mot de passe pour vous connecter au backend web de Maloja.',
     8: 'Mot de passe',
