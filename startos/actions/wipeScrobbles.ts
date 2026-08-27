@@ -5,7 +5,9 @@ export const wipeScrobbles = sdk.Action.withoutInput(
   'wipe-scrobbles',
   async () => ({
     name: i18n('Wipe Scrobble Database'),
-    description: i18n('Permanently delete all scrobble history, tracks, artists, and albums.'),
+    description: i18n(
+      'Permanently delete all scrobble history, tracks, artists, and albums.',
+    ),
     warning: i18n(
       'This permanently deletes ALL scrobble history — every scrobble, track, artist, and album — and cannot be undone. Your admin password, API keys, scrobble rules, and custom images are not affected. Consider using the Export button in Maloja’s Admin Panel to back up your data first.',
     ),
@@ -29,7 +31,7 @@ export const wipeScrobbles = sdk.Action.withoutInput(
         readonly: false,
       }),
       'maloja-wipe',
-      async sub =>
+      async (sub) =>
         sub.execFail([
           'rm',
           '-f',
@@ -42,7 +44,9 @@ export const wipeScrobbles = sdk.Action.withoutInput(
     return {
       version: '1',
       title: i18n('Scrobble Database Wiped'),
-      message: i18n('All scrobble history has been deleted. Start the service to generate a fresh, empty database.'),
+      message: i18n(
+        'All scrobble history has been deleted. Start the service to generate a fresh, empty database.',
+      ),
       result: null,
     }
   },

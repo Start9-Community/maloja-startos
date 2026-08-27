@@ -7,7 +7,9 @@ export const setAdminPassword = sdk.Action.withoutInput(
   'set-admin-password',
   async () => ({
     name: i18n('Set Admin Password'),
-    description: i18n('Generate a new random password for the Maloja web backend. Replaces any existing password.'),
+    description: i18n(
+      'Generate a new random password for the Maloja web backend. Replaces any existing password.',
+    ),
     warning: null,
     allowedStatuses: 'any',
     group: null,

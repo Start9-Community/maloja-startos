@@ -4,7 +4,9 @@ import { storeJson } from './fileModels/store.json'
 import { uiPort } from './utils'
 
 export const main = sdk.setupMain(async ({ effects }) => {
-  const adminPassword = await storeJson.read(s => s.adminPassword).const(effects)
+  const adminPassword = await storeJson
+    .read((s) => s.adminPassword)
+    .const(effects)
 
   return sdk.Daemons.of(effects).addDaemon('maloja', {
     subcontainer: sdk.SubContainer.of(

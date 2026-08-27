@@ -2,54 +2,73 @@
 
 ## Documentation
 
-- [Maloja README](https://github.com/krateng/maloja#readme) — the upstream project overview, scrobbling setup, and configuration reference.
+- [Maloja README](https://github.com/krateng/maloja#readme) — the upstream project overview, the list of supported scrobble clients, and the settings reference.
 
 ## What you get on StartOS
 
-A running Maloja instance with its web interface exposed. All scrobble data, charts, and settings live on your StartOS server's storage.
+A web interface serving your listening charts, statistics, and admin panel, plus the API
+that scrobble clients post plays to. Everything Maloja records — scrobbles, artist
+associations, custom artwork, scrobble rules — lives on your server's storage and is
+included in StartOS backups.
+
+Your admin password is generated for you rather than chosen during Maloja's own setup
+wizard, and is re-applied every time the service starts.
+
+Only the admin pages ask for that password. Your charts, statistics and scrobble history
+are visible to anyone who can open the address — that is how Maloja is built, so treat the
+addresses you enable as the thing that controls who can see what you listen to.
 
 ## Getting set up
 
-1. Run the **Set Admin Password** action (you'll see this prompted as a required task right after install) to generate your admin password.
-2. Open the web interface and log in with username `admin` and the password from step 1.
-3. Configure a scrobbler client to point at your Maloja server's web address to start tracking plays — see the upstream documentation's scrobbling section for supported clients.
+1. Run the **Set Admin Password** action. You will be prompted for this as a required task
+   before the service will start. Copy the password it shows you — it is displayed once.
+2. Open the web interface and sign in with the username `admin` and that password.
+3. Point a scrobble client at your Maloja address to start recording plays. In the web
+   interface, turn on admin mode and open the **API Keys** page to create a key for the
+   client; the upstream README lists which clients are supported and how each is configured.
 
 ## Using Maloja
 
 ### Web interface
 
-Your listening charts, statistics, and admin settings all live here. Enable admin mode from the web interface to edit artist associations, upload custom images, and manage scrobble rules.
+Your charts, statistics, and admin settings all live here. Turning on admin mode adds the
+pages for editing artist associations, uploading custom images, managing scrobble rules,
+and exporting your data.
+
+Maloja notes on every start that it has no Last.fm or TheAudioDB key. Those are optional
+and only affect whether it can fetch artist and album artwork from those services — with
+neither, it shows the images you upload yourself. If you want them, sign up with the
+service and paste the key into Maloja's own **Settings** page in admin mode.
 
 ### Actions
 
-- **Set Admin Password** — generates a new random admin password and displays it. Run this any time to rotate your password.
-- **Import Scrobbles** — migrate your history from another Maloja instance. On the *other* instance, use its Admin Panel's Export button to download a `maloja_export_*.json` file, then open it in a text editor and copy its entire contents. Stop this service, run this action, and paste the contents in. Existing scrobbles won't be duplicated, so it's safe to re-run. This only accepts Maloja's own export format, not Last.fm/Spotify/other platform exports — and very large libraries (hundreds of thousands of scrobbles) may be too large to paste in.
-- **Wipe Scrobble Database** — permanently deletes your entire scrobble history (every scrobble, track, artist, and album). This cannot be undone. Your admin password, API keys, scrobble rules, and custom images are untouched. Stop the service first. Consider using Maloja's own Admin Panel → Export button to back up your data before running this.
+- **Set Admin Password** — generates a new random password and displays it. Run it any time
+  to rotate. Your API keys are not affected.
+- **Import Scrobbles** — brings your history over from another Maloja instance. On that
+  other instance, use its admin panel's **Export** button, open the downloaded
+  `maloja_export_*.json` in a text editor, and copy all of it. Then stop this service, run
+  the action, paste the contents in, and start the service again. Existing scrobbles are not
+  duplicated, so it is safe to run twice.
+- **Wipe Scrobble Database** — permanently deletes every scrobble, track, artist, and album.
+  This cannot be undone. Your admin password, API keys, scrobble rules, and custom images
+  are left alone. Export your data from Maloja's admin panel first if you might want it
+  back.
 
-### Connecting external scrobbler clients (e.g. multi-scrobbler)
+### Connecting a scrobble client that runs elsewhere
 
-If you're pointing a scrobbler tool that runs *outside* StartOS — [multi-scrobbler](https://github.com/FoxxMD/multi-scrobbler), a script, a phone app, etc. — at this instance's LAN address, you may see a connection failure even with the correct URL and a valid Maloja API key (generated from Maloja's own Admin Panel → API Keys, not your StartOS admin password).
+A client running on another machine — a script, a phone app, a scrobbler in its own Docker
+container — may refuse to connect even with the right address and a valid API key, because
+it does not recognise the certificate your server presents. Browsers ask you whether to
+trust it; most other HTTP clients simply give up.
 
-**Why:** StartOS terminates HTTPS on the LAN address using its own self-signed certificate. Browsers get an interactive "trust this certificate" prompt on first visit; headless/non-browser clients don't, and most HTTP libraries reject unrecognized certs outright rather than connecting anyway. This affects *every* StartOS package's LAN interface when accessed by a non-browser client — it isn't specific to Maloja.
+To fix it, give that client your server's certificate:
 
-**Fix — trust StartOS's root CA in the client:**
+1. Download it: `curl -k -o startos-ca.crt "https://<your-server-address>/static/local-root-ca.crt"`
+2. Add it to the client's own trust store. If the client runs in a container, the
+   certificate has to go **inside** that container — trusting it on the host does not reach
+   in. A Node-based client, for example, needs the file mounted in and
+   `NODE_EXTRA_CA_CERTS` pointed at it.
+3. Use the `https://` address.
 
-1. Download your StartOS server's root CA certificate:
-   ```
-   curl -k -o local-root-ca.crt "https://<your-startos-lan-address>/static/local-root-ca.crt"
-   ```
-2. If the client runs in its own Docker container (as multi-scrobbler typically does), mount the certificate into that container and point it at the cert. For a Node.js-based client like multi-scrobbler, add to its `docker-compose.yml`:
-   ```yaml
-   services:
-     multi-scrobbler:
-       volumes:
-         - /path/to/local-root-ca.crt:/certs/startos-ca.crt:ro
-       environment:
-         - NODE_EXTRA_CA_CERTS=/certs/startos-ca.crt
-   ```
-   `docker compose up -d` to recreate the container (a plain `restart` won't pick up a new bind mount).
-3. Use the `https://` address (not `http://` — StartOS redirects plain HTTP to HTTPS on the same port anyway, and a client that doesn't follow redirects will just see an empty `307` response).
-
-Once the client's own trust store includes StartOS's root CA, the connection validates normally — no need to disable certificate checking.
-
-(Trusting the certificate on your workstation's OS/browser, e.g. via StartOS's own "Trust your Root CA" prompt, does **not** extend into a separate Docker container's isolated filesystem — each container needs the CA installed into its own trust path.)
+A scrobble client installed as a StartOS service needs none of this — it reaches Maloja
+directly, with no certificate in the way.
