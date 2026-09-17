@@ -8,7 +8,7 @@ export const manifest = setupManifest({
   packageRepo: 'https://github.com/Start9-Community/maloja-startos',
   upstreamRepo: 'https://github.com/krateng/maloja',
   marketingUrl: 'https://maloja.krateng.ch',
-  donationUrl: null,
+  donationUrl: 'https://patreon.com/krateng',
   description: { short, long },
   volumes: ['main'],
   images: {
