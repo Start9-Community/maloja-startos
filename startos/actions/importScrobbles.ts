@@ -60,6 +60,7 @@ export const importScrobbles = sdk.Action.withInput(
           {
             env: { MALOJA_DATA_DIRECTORY: '/data' },
           },
+          null,
         )
       },
     )
