@@ -133,13 +133,15 @@ Three actions: one credential, one migration, one destructive reset.
   `adminPassword` in `store.json`; the new value reaches Maloja on the next start, so the
   daemon restarts to apply it. Returns the generated password, which is the only time it is
   displayed — StartOS does not store a second copy you can read back. Safe to re-run, but
-  each run invalidates the previous password.
+  each run invalidates the previous password, so once a password exists the action asks for
+  confirmation before running; the first run, from the install task, does not.
 
 - **Import Scrobbles** (`import-scrobbles`) — run it when migrating from another Maloja
   instance. Takes the pasted contents of that instance's export file, stages it in a
   temporary subcontainer sharing the `main` volume, and runs Maloja's own `import` against
-  it, returning the importer's output verbatim. Duration scales with the export; a small
-  library is seconds, a large one minutes. Maloja de-duplicates on import, so re-running with
+  it, returning the importer's console report — ending with the counts of scrobbles imported
+  and skipped — as a copyable text block with its ANSI colour codes stripped. Duration scales
+  with the export; a small library is seconds, a large one minutes. Maloja de-duplicates on import, so re-running with
   the same export adds nothing — but the action accepts only Maloja's own export format, not
   Last.fm, Spotify, ListenBrainz, or Rockbox exports, which upstream detects by their original
   filename and which pasted text therefore cannot carry.

@@ -43,11 +43,13 @@ service and paste the key into Maloja's own **Settings** page in admin mode.
 ### Actions
 
 - **Set Admin Password** — generates a new random password and displays it. Run it any time
-  to rotate. Your API keys are not affected.
+  to rotate; once a password exists, it asks you to confirm before replacing it. Your API keys
+  are not affected.
 - **Import Scrobbles** — brings your history over from another Maloja instance. On that
   other instance, use its admin panel's **Export** button, open the downloaded
   `maloja_export_*.json` in a text editor, and copy all of it. Then stop this service, run
-  the action, paste the contents in, and start the service again. Existing scrobbles are not
+  the action, paste the contents in, and start the service again. The result shows Maloja's
+  report of how many scrobbles it imported and skipped. Existing scrobbles are not
   duplicated, so it is safe to run twice.
 - **Wipe Scrobble Database** — permanently deletes every scrobble, track, artist, and album.
   This cannot be undone. Your admin password, API keys, scrobble rules, and custom images

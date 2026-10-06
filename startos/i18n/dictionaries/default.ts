@@ -13,6 +13,7 @@ const dict = {
   'Login Credentials': 6,
   'Use this password to sign in to the Maloja web backend.': 7,
   Password: 8,
+  'Replaces the current admin password: the old one stops working, and the new one is shown only once. A running Maloja restarts to apply it.': 21,
   // init/watchCredentials.ts
   'Set the admin password before signing in to Maloja': 9,
   // actions/importScrobbles.ts
@@ -22,6 +23,7 @@ const dict = {
   'Import scrobble history from another Maloja instance’s export file.': 13,
   'Stop the service first. Existing scrobbles are not duplicated, but a large import may take a while. Very large libraries (hundreds of thousands of scrobbles) may be too large to paste — see the README for the current file-size limitation.': 14,
   'Import Complete': 15,
+  'Maloja’s report on the import is below.': 22,
   // actions/wipeScrobbles.ts
   'Wipe Scrobble Database': 16,
   'Permanently delete all scrobble history, tracks, artists, and albums.': 17,

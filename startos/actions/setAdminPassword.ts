@@ -5,12 +5,16 @@ import { sdk } from '../sdk'
 
 export const setAdminPassword = sdk.Action.withoutInput(
   'set-admin-password',
-  async () => ({
+  async ({ effects }) => ({
     name: i18n('Set Admin Password'),
     description: i18n(
       'Generate a new random password for the Maloja web backend. Replaces any existing password.',
     ),
-    warning: null,
+    warning: (await storeJson.read((s) => s.adminPassword).const(effects))
+      ? i18n(
+          'Replaces the current admin password: the old one stops working, and the new one is shown only once. A running Maloja restarts to apply it.',
+        )
+      : null,
     allowedStatuses: 'any',
     group: null,
     visibility: 'enabled',

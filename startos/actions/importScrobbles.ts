@@ -57,10 +57,7 @@ export const importScrobbles = sdk.Action.withInput(
         await sub.writeFile(`/tmp/${stagedName}`, input.exportJson)
         return sub.execFail(
           ['/venv/bin/python', '-m', 'maloja', 'import', `/tmp/${stagedName}`],
-          {
-            env: { MALOJA_DATA_DIRECTORY: '/data' },
-          },
-          null,
+          { env: { MALOJA_DATA_DIRECTORY: '/data' }, timeout: null },
         )
       },
     )
@@ -68,8 +65,15 @@ export const importScrobbles = sdk.Action.withInput(
     return {
       version: '1',
       title: i18n('Import Complete'),
-      message: stdout.toString(),
-      result: null,
+      message: i18n('Maloja’s report on the import is below.'),
+      result: {
+        type: 'multiline',
+        // Maloja colours its console output unconditionally.
+        value: stdout.toString().replace(/\x1b\[[0-9;]*m/g, ''),
+        copyable: true,
+        masked: false,
+        qr: false,
+      },
     }
   },
 )
