@@ -23,6 +23,8 @@ export default {
     18: 'Esto elimina permanentemente TODO el historial de scrobbles — cada scrobble, pista, artista y álbum — y no se puede deshacer. Tu contraseña de administrador, claves API, reglas de scrobbles e imágenes personalizadas no se ven afectadas. Considera usar el botón Exportar del Panel de administración de Maloja para respaldar tus datos primero.',
     19: 'Base de datos de scrobbles borrada',
     20: 'Se ha eliminado todo el historial de scrobbles. Inicia el servicio para generar una base de datos nueva y vacía.',
+    21: 'Reemplaza la contraseña de administrador actual: la anterior deja de funcionar y la nueva se muestra una sola vez. Si Maloja está en ejecución, se reinicia para aplicarla.',
+    22: 'El informe de Maloja sobre la importación aparece a continuación.',
   },
   de_DE: {
     0: 'Weboberfläche',
@@ -46,6 +48,8 @@ export default {
     18: 'Dies löscht ENDGÜLTIG den gesamten Scrobble-Verlauf — jeden Scrobble, Titel, Künstler und jedes Album — und kann nicht rückgängig gemacht werden. Dein Admin-Passwort, API-Schlüssel, Scrobble-Regeln und benutzerdefinierten Bilder sind davon nicht betroffen. Nutze zuerst den Export-Button im Maloja-Admin-Panel, um deine Daten zu sichern.',
     19: 'Scrobble-Datenbank gelöscht',
     20: 'Der gesamte Scrobble-Verlauf wurde gelöscht. Starte den Dienst, um eine neue, leere Datenbank zu erzeugen.',
+    21: 'Ersetzt das aktuelle Admin-Passwort: Das alte funktioniert nicht mehr, und das neue wird nur einmal angezeigt. Läuft Maloja, startet es neu, um es anzuwenden.',
+    22: 'Malojas Bericht zum Import steht unten.',
   },
   pl_PL: {
     0: 'Interfejs sieciowy',
@@ -69,6 +73,8 @@ export default {
     18: 'To trwale usuwa CAŁĄ historię scrobbli — każdy scrobble, utwór, artystę i album — i nie można tego cofnąć. Twoje hasło administratora, klucze API, reguły scrobbli i niestandardowe obrazy nie zostaną naruszone. Rozważ najpierw użycie przycisku Eksport w panelu administratora Maloja, aby wykonać kopię zapasową danych.',
     19: 'Baza danych scrobbli wyczyszczona',
     20: 'Cała historia scrobbli została usunięta. Uruchom usługę, aby wygenerować nową, pustą bazę danych.',
+    21: 'Zastępuje obecne hasło administratora: stare przestaje działać, a nowe jest wyświetlane tylko raz. Uruchomiona Maloja restartuje się, aby je zastosować.',
+    22: 'Raport Maloja z importu znajduje się poniżej.',
   },
   fr_FR: {
     0: 'Interface web',
@@ -92,5 +98,7 @@ export default {
     18: "Ceci supprime DÉFINITIVEMENT tout l'historique d'écoute — chaque scrobble, titre, artiste et album — et ne peut pas être annulé. Votre mot de passe administrateur, vos clés API, vos règles de scrobbles et vos images personnalisées ne sont pas affectés. Pensez à utiliser d'abord le bouton Export du panneau admin de Maloja pour sauvegarder vos données.",
     19: 'Base de données des scrobbles effacée',
     20: "Tout l'historique d'écoute a été supprimé. Démarrez le service pour générer une nouvelle base de données vide.",
+    21: "Remplace le mot de passe administrateur actuel : l'ancien cesse de fonctionner et le nouveau n'est affiché qu'une seule fois. Si Maloja est en cours d'exécution, il redémarre pour l'appliquer.",
+    22: "Le rapport de Maloja sur l'importation figure ci-dessous.",
   },
 } satisfies Record<string, LangDict>

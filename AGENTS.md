@@ -12,8 +12,16 @@ admin credentials", "expose a web UI") to the constructs, the reference pages, a
 package to copy. Find the recipe before you read this package's neighbours: a package you reach by
 grepping may be non-conformant, and the recipe outranks it.
 
+Freshly scaffolded? Work the
+[New Package Checklist](../start-technologies/projects/start-sdk/docs/src/new-package-checklist.md)
+(or <https://docs.start9.com/packaging/new-package-checklist.html>) from top to bottom. It is a
+guide page, not a file in this repo — read it, don't copy it in.
+
 Keep `README.md` (technical reference for an AI support or administering agent) and
-`instructions.md` (end-user docs) in sync with your changes.
+`instructions.md` (end-user docs) in sync with your changes. This file restates neither:
+whoever changes the package has both, so it carries only what they don't — repo mechanics,
+a change that looks right and is not, where the next thing gets added, a naming trap, a
+build or test invocation particular to this repo.
 
 **Fix a defect you spot rather than reporting it** — you have the package open and the
 context to be sure. File **a GitHub issue on this repo** only when the call isn't yours to
@@ -29,5 +37,6 @@ verified, tried, and decided belongs in the commit message and the PR body.
 - **`MALOJA_FORCE_PASSWORD` is re-applied on every container start**, not just the first —
   that is what makes the stored password survive a restart and a restore. Don't move it into
   an install-only oneshot or guard it on first run.
-- **Maloja's `import` only recognises a file whose name matches `maloja_export[_0-9]*\.json`.**
-  Any descriptive suffix on the staged copy makes it fall through to the wrong parser.
+- **Stage the import file as exactly `maloja_export.json`.** Maloja's `import` recognises an
+  export only by a name matching `maloja_export[_0-9]*\.json`, so a descriptive suffix makes
+  it reject the file.
