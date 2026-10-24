@@ -35,7 +35,8 @@ turns your listening history into personal charts and statistics.
 
 The upstream `krateng/maloja` image is used for `x86_64` and `aarch64`, with one layer from the
 root `Dockerfile` that upgrades certifi in Maloja's `/venv`, the CA store its outbound HTTPS
-reads. The layer comes out once upstream ships an image built on a fixed certifi.
+reads. The layer is temporary and comes out once upstream ships an image built on a fixed
+certifi.
 
 It is built on `lsiobase/alpine` — linuxserver.io's s6-overlay base — whose `/init`
 entrypoint must run as PID 1, so the daemon execs the image's own entrypoint rather than
