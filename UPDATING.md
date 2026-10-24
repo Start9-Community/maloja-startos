@@ -1,6 +1,6 @@
 # Updating the upstream version
 
-Upstream is the `krateng/maloja` Docker image, pinned by tag in `startos/manifest/index.ts` (`images.maloja.source.dockerTag`).
+Upstream is the `krateng/maloja` Docker image, pinned by tag in `startos/manifest/index.ts` (`images.maloja.source.dockerBuild.buildArgs.IMAGE`) and layered by the root `Dockerfile`.
 
 ## Determining the upstream version
 
@@ -11,6 +11,6 @@ Upstream is the `krateng/maloja` Docker image, pinned by tag in `startos/manifes
 
 ## Applying the bump
 
-1. Edit `images.maloja.source.dockerTag` in `startos/manifest/index.ts` to the new `krateng/maloja:<tag>`.
+1. Edit `images.maloja.source.dockerBuild.buildArgs.IMAGE` in `startos/manifest/index.ts` to the new `krateng/maloja:<tag>`.
 2. Bump `startos/versions/current.ts` (or add a new version file if the bump needs a migration — see `versions.md`).
 3. Rebuild (`make`), install, and verify the web interface still loads and logs in with the existing admin password (no `MALOJA_FORCE_PASSWORD` regression).

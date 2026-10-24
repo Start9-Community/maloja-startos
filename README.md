@@ -33,7 +33,9 @@ turns your listening history into personal charts and statistics.
 
 ## Image and Container Runtime
 
-The upstream `krateng/maloja` image is used unmodified, for `x86_64` and `aarch64`.
+The upstream `krateng/maloja` image is used for `x86_64` and `aarch64`, with one layer from the
+root `Dockerfile` that upgrades certifi in Maloja's `/venv`, the CA store its outbound HTTPS
+reads. The layer comes out once upstream ships an image built on a fixed certifi.
 
 It is built on `lsiobase/alpine` — linuxserver.io's s6-overlay base — whose `/init`
 entrypoint must run as PID 1, so the daemon execs the image's own entrypoint rather than
@@ -55,15 +57,15 @@ One volume holds everything, and Maloja lays the rest of its tree out beneath it
 `MALOJA_DATA_DIRECTORY=/data` collapses Maloja's config, state, cache, and log roots onto
 that one path. Within it:
 
-| Path                 | What it holds                                    |
-| -------------------- | ------------------------------------------------ |
-| `malojadb.sqlite`    | every scrobble, track, artist, and album         |
-| `auth/auth.sqlite`   | the admin login                                  |
-| `apikeys.yml`        | the API keys scrobble clients authenticate with  |
-| `settings.ini`       | Maloja's own settings, editable from its web UI  |
-| `rules/`, `images/`  | scrobble rules and custom artwork                |
-| `cache/`, `logs/`    | image cache and Maloja's logs                    |
-| `store.json`         | StartOS-side state — see [File Models](#file-models) |
+| Path                | What it holds                                        |
+| ------------------- | ---------------------------------------------------- |
+| `malojadb.sqlite`   | every scrobble, track, artist, and album             |
+| `auth/auth.sqlite`  | the admin login                                      |
+| `apikeys.yml`       | the API keys scrobble clients authenticate with      |
+| `settings.ini`      | Maloja's own settings, editable from its web UI      |
+| `rules/`, `images/` | scrobble rules and custom artwork                    |
+| `cache/`, `logs/`   | image cache and Maloja's logs                        |
+| `store.json`        | StartOS-side state — see [File Models](#file-models) |
 
 The scrobble database and the login database are separate files, which is what lets
 **Wipe Scrobble Database** clear listening history without disturbing credentials.
@@ -99,9 +101,9 @@ None.
 
 A single web interface serves both the dashboard and Maloja's REST API.
 
-| Interface | Id   | Type | Port  | Protocol | Purpose                                        |
-| --------- | ---- | ---- | ----- | -------- | ---------------------------------------------- |
-| Web Interface | `ui` | ui | 42010 | HTTP     | charts, statistics, admin panel, and the API scrobble clients post to |
+| Interface     | Id   | Type | Port  | Protocol | Purpose                                                               |
+| ------------- | ---- | ---- | ----- | -------- | --------------------------------------------------------------------- |
+| Web Interface | `ui` | ui   | 42010 | HTTP     | charts, statistics, admin panel, and the API scrobble clients post to |
 
 Maloja itself only ever speaks plain HTTP on 42010; TLS is terminated by StartOS in front
 of it. Scrobble clients authenticate with an API key generated from Maloja's own Admin
@@ -203,7 +205,7 @@ the credential you already have keeps working.
 
 ```yaml
 package_id: maloja
-image: krateng/maloja
+image: krateng/maloja + root Dockerfile (certifi upgrade)
 architectures: [x86_64, aarch64]
 subcontainers: [maloja-sub, maloja-import, maloja-wipe]
 volumes:
