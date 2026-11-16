@@ -45,12 +45,13 @@ service and paste the key into Maloja's own **Settings** page in admin mode.
 - **Set Admin Password** — generates a new random password and displays it. Run it any time
   to rotate; once a password exists, it asks you to confirm before replacing it. Your API keys
   are not affected.
-- **Import Scrobbles** — brings your history over from another Maloja instance. On that
-  other instance, use its admin panel's **Export** button, open the downloaded
-  `maloja_export_*.json` in a text editor, and copy all of it. Then stop this service, run
-  the action, paste the contents in, and start the service again. The result shows Maloja's
-  report of how many scrobbles it imported and skipped. Existing scrobbles are not
-  duplicated, so it is safe to run twice.
+- **Import Scrobbles** — brings in your listening history from another Maloja instance
+  (its admin panel's **Export** button), Last.fm, Spotify, ListenBrainz, or a Rockbox
+  `.scrobbler.log`. Upload the file under the name it was downloaded with — Maloja tells
+  the formats apart by filename. Stop this service, run the action, choose the file, and
+  start the service again. Spotify splits its history across several files; run the
+  action once for each. The result shows Maloja's report of how many scrobbles it
+  imported and skipped. Existing scrobbles are not duplicated, so it is safe to run twice.
 - **Wipe Scrobble Database** — permanently deletes every scrobble, track, artist, and album.
   This cannot be undone. Your admin password, API keys, scrobble rules, and custom images
   are left alone. Export your data from Maloja's admin panel first if you might want it

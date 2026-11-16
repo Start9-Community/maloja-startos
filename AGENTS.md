@@ -37,6 +37,7 @@ verified, tried, and decided belongs in the commit message and the PR body.
 - **`MALOJA_FORCE_PASSWORD` is re-applied on every container start**, not just the first —
   that is what makes the stored password survive a restart and a restore. Don't move it into
   an install-only oneshot or guard it on first run.
-- **Stage the import file as exactly `maloja_export.json`.** Maloja's `import` recognises an
-  export only by a name matching `maloja_export[_0-9]*\.json`, so a descriptive suffix makes
-  it reject the file.
+- **Upload the import file to a directory, not a fixed filename.** Maloja's `import` picks the
+  parser from the file's name, so only a directory target, which keeps the uploaded name,
+  imports anything but Maloja's own format.
+- **Never stage imports in `/data/import`.** Maloja re-imports every file there on each start.

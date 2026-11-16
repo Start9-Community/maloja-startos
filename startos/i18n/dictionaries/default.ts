@@ -17,13 +17,14 @@ const dict = {
   // init/watchCredentials.ts
   'Set the admin password before signing in to Maloja': 9,
   // actions/importScrobbles.ts
-  'Maloja Export JSON': 10,
-  'The full contents of a maloja_export_*.json file from another Maloja instance (Admin Panel → Export). Open the file and paste its entire contents here.': 11,
+  'Export File': 10,
+  'A Maloja, Last.fm, Spotify, ListenBrainz, or Rockbox export. Keep the filename the export was downloaded with: Maloja identifies the format by it.': 11,
   'Import Scrobbles': 12,
-  'Import scrobble history from another Maloja instance’s export file.': 13,
-  'Stop the service first. Existing scrobbles are not duplicated, but a large import may take a while. Very large libraries (hundreds of thousands of scrobbles) may be too large to paste — see the README for the current file-size limitation.': 14,
+  'Import scrobble history from a Maloja, Last.fm, Spotify, ListenBrainz, or Rockbox export file.': 13,
+  'Stop the service first. Existing scrobbles are not duplicated, but a large import may take a while.': 14,
   'Import Complete': 15,
   'Maloja’s report on the import is below.': 22,
+  'Maloja did not recognise that file as an export it can import. Rename it back to the filename it was downloaded with and try again.': 23,
   // actions/wipeScrobbles.ts
   'Wipe Scrobble Database': 16,
   'Permanently delete all scrobble history, tracks, artists, and albums.': 17,

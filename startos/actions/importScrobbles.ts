@@ -1,35 +1,44 @@
+import { types as T } from '@start9labs/start-sdk'
+import { mkdir, rm } from 'node:fs/promises'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
 
 const { InputSpec, Value } = sdk
 
-const inputSpec = InputSpec.of({
-  exportJson: Value.textarea({
-    name: i18n('Maloja Export JSON'),
-    description: i18n(
-      'The full contents of a maloja_export_*.json file from another Maloja instance (Admin Panel → Export). Open the file and paste its entire contents here.',
-    ),
-    warning: null,
-    footnote: null,
-    default: null,
-    required: true,
-    minLength: 1,
-    maxLength: null,
-    minRows: 10,
-    maxRows: 20,
-    placeholder: '{"maloja":{"export_time":...},"scrobbles":[...]}',
-  }),
-})
+// Not Maloja's own `import` directory: Maloja re-imports everything in that one
+// on every start.
+const uploadDir = 'upload'
+
+const inputSpec = async ({ effects }: { effects: T.Effects }) => {
+  await mkdir(sdk.volumes.main.subpath(uploadDir), { recursive: true })
+  return InputSpec.of({
+    exportFile: Value.file({
+      name: i18n('Export File'),
+      description: i18n(
+        'A Maloja, Last.fm, Spotify, ListenBrainz, or Rockbox export. Keep the filename the export was downloaded with: Maloja identifies the format by it.',
+      ),
+      // A directory target keeps the uploaded filename, which Maloja's
+      // importer dispatches on.
+      uploadId: await sdk.prepareUpload(effects, {
+        volume: 'main',
+        path: uploadDir,
+        mode: 0o644,
+      }),
+      extensions: ['.json', '.csv', '.log'],
+      required: true,
+    }),
+  })
+}
 
 export const importScrobbles = sdk.Action.withInput(
   'import-scrobbles',
   async () => ({
     name: i18n('Import Scrobbles'),
     description: i18n(
-      'Import scrobble history from another Maloja instance’s export file.',
+      'Import scrobble history from a Maloja, Last.fm, Spotify, ListenBrainz, or Rockbox export file.',
     ),
     warning: i18n(
-      'Stop the service first. Existing scrobbles are not duplicated, but a large import may take a while. Very large libraries (hundreds of thousands of scrobbles) may be too large to paste — see the README for the current file-size limitation.',
+      'Stop the service first. Existing scrobbles are not duplicated, but a large import may take a while.',
     ),
     allowedStatuses: 'only-stopped',
     group: null,
@@ -38,11 +47,6 @@ export const importScrobbles = sdk.Action.withInput(
   inputSpec,
   async () => ({}),
   async ({ effects, input }) => {
-    // Must match Maloja's own maloja_export[_0-9]*.json detection regex exactly
-    // — only digits/underscores are allowed after "maloja_export", so no
-    // descriptive suffix (e.g. "_import") can go here.
-    const stagedName = 'maloja_export.json'
-
     const { stdout } = await sdk.SubContainer.withTemp(
       effects,
       { imageId: 'maloja' },
@@ -54,13 +58,39 @@ export const importScrobbles = sdk.Action.withInput(
       }),
       'maloja-import',
       async (sub) => {
-        await sub.writeFile(`/tmp/${stagedName}`, input.exportJson)
-        return sub.execFail(
-          ['/venv/bin/python', '-m', 'maloja', 'import', `/tmp/${stagedName}`],
-          { env: { MALOJA_DATA_DIRECTORY: '/data' }, timeout: null },
-        )
+        try {
+          return await sub.execFail(
+            [
+              '/venv/bin/python',
+              '-m',
+              'maloja',
+              'import',
+              `/data/${input.exportFile.path}`,
+            ],
+            {
+              env: { MALOJA_DATA_DIRECTORY: '/data' },
+              // Maloja's generic-JSON fallback opens the bare filename.
+              cwd: `/data/${uploadDir}`,
+              timeout: null,
+            },
+          )
+        } finally {
+          await rm(sdk.volumes.main.subpath(input.exportFile.path), {
+            force: true,
+          })
+        }
       },
     )
+
+    // Maloja's importer exits 0 on a file it cannot identify.
+    const report = stdout.toString()
+    if (report.includes('could not be identified as a valid import source')) {
+      throw new Error(
+        i18n(
+          'Maloja did not recognise that file as an export it can import. Rename it back to the filename it was downloaded with and try again.',
+        ),
+      )
+    }
 
     return {
       version: '1',
@@ -69,7 +99,7 @@ export const importScrobbles = sdk.Action.withInput(
       result: {
         type: 'multiline',
         // Maloja colours its console output unconditionally.
-        value: stdout.toString().replace(/\x1b\[[0-9;]*m/g, ''),
+        value: report.replace(/\x1b\[[0-9;]*m/g, ''),
         copyable: true,
         masked: false,
         qr: false,
