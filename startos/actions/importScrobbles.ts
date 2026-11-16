@@ -1,5 +1,7 @@
 import { types as T } from '@start9labs/start-sdk'
+import { randomUUID } from 'node:crypto'
 import { mkdir, rm } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import { i18n } from '../i18n'
 import { sdk } from '../sdk'
 
@@ -10,7 +12,9 @@ const { InputSpec, Value } = sdk
 const uploadDir = 'upload'
 
 const inputSpec = async ({ effects }: { effects: T.Effects }) => {
-  await mkdir(sdk.volumes.main.subpath(uploadDir), { recursive: true })
+  // Each form owns its staging directory; other uploads cannot replace its file.
+  const uploadPath = `${uploadDir}/${randomUUID()}`
+  await mkdir(sdk.volumes.main.subpath(uploadPath), { recursive: true })
   return InputSpec.of({
     exportFile: Value.file({
       name: i18n('Export File'),
@@ -21,7 +25,7 @@ const inputSpec = async ({ effects }: { effects: T.Effects }) => {
       // importer dispatches on.
       uploadId: await sdk.prepareUpload(effects, {
         volume: 'main',
-        path: uploadDir,
+        path: uploadPath,
         mode: 0o644,
       }),
       extensions: ['.json', '.csv', '.log'],
@@ -47,19 +51,20 @@ export const importScrobbles = sdk.Action.withInput(
   inputSpec,
   async () => ({}),
   async ({ effects, input }) => {
-    const { stdout } = await sdk.SubContainer.withTemp(
-      effects,
-      { imageId: 'maloja' },
-      sdk.Mounts.of().mountVolume({
-        volumeId: 'main',
-        subpath: null,
-        mountpoint: '/data',
-        readonly: false,
-      }),
-      'maloja-import',
-      async (sub) => {
-        try {
-          return await sub.execFail(
+    const uploadPath = dirname(input.exportFile.path)
+    try {
+      const { stdout } = await sdk.SubContainer.withTemp(
+        effects,
+        { imageId: 'maloja' },
+        sdk.Mounts.of().mountVolume({
+          volumeId: 'main',
+          subpath: null,
+          mountpoint: '/data',
+          readonly: false,
+        }),
+        'maloja-import',
+        async (sub) =>
+          sub.execFail(
             [
               '/venv/bin/python',
               '-m',
@@ -70,41 +75,41 @@ export const importScrobbles = sdk.Action.withInput(
             {
               env: { MALOJA_DATA_DIRECTORY: '/data' },
               // Maloja's generic-JSON fallback opens the bare filename.
-              cwd: `/data/${uploadDir}`,
+              cwd: `/data/${uploadPath}`,
               timeout: null,
             },
-          )
-        } finally {
-          await rm(sdk.volumes.main.subpath(input.exportFile.path), {
-            force: true,
-          })
-        }
-      },
-    )
-
-    // Maloja's importer exits 0 on a file it cannot identify.
-    const report = stdout.toString()
-    if (report.includes('could not be identified as a valid import source')) {
-      throw new Error(
-        i18n(
-          'Maloja did not recognise that file as an export it can import. Rename it back to the filename it was downloaded with and try again.',
-        ),
+          ),
       )
-    }
 
-    return {
-      version: '1',
-      title: i18n('Import Complete'),
-      message: i18n('Maloja’s report on the import is below.'),
-      result: {
-        type: 'multiline',
-        // Maloja colours its console output unconditionally.
-        value: report.replace(/\x1b\[[0-9;]*m/g, ''),
-        copyable: true,
-        masked: false,
-        qr: false,
-        filename: null,
-      },
+      // Maloja's importer exits 0 on a file it cannot identify.
+      const report = stdout.toString()
+      if (report.includes('could not be identified as a valid import source')) {
+        throw new Error(
+          i18n(
+            'Maloja did not recognise that file as an export it can import. Rename it back to the filename it was downloaded with and try again.',
+          ),
+        )
+      }
+
+      return {
+        version: '1',
+        title: i18n('Import Complete'),
+        message: i18n('Maloja’s report on the import is below.'),
+        result: {
+          type: 'multiline',
+          // Maloja colours its console output unconditionally.
+          value: report.replace(/\x1b\[[0-9;]*m/g, ''),
+          copyable: true,
+          masked: false,
+          qr: false,
+          filename: null,
+        },
+      }
+    } finally {
+      await rm(sdk.volumes.main.subpath(uploadPath), {
+        recursive: true,
+        force: true,
+      })
     }
   },
 )

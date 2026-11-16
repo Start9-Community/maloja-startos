@@ -142,12 +142,13 @@ Three actions: one credential, one migration, one destructive reset.
   `endsong_*.json`), ListenBrainz (`<user>_lb-<date>.json`), and Rockbox (`.scrobbler.log`)
   — upstream's own importer, which picks the parser from the filename alone, so a renamed
   file fails (a renamed Maloja export is still recognised from its contents). StartOS
-  uploads the file, under its original name and with no size limit, into the `upload/`
-  directory of the `main` volume before the handler runs; the handler creates that
-  directory when the form opens, runs Maloja's `import` against the file in a temporary
-  subcontainer sharing the volume, and deletes the file whether or not the import
-  succeeds. It fails with an error if Maloja cannot identify the file; otherwise it returns
-  the importer's console report — ending with the counts of scrobbles imported and skipped
+  uploads the file, under its original name and with no size limit, into a per-form
+  subdirectory of `upload/` in the `main` volume before the handler runs. The form creates
+  its own staging directory when it opens; the handler runs Maloja's `import` against the
+  file in a temporary subcontainer sharing the volume and deletes that staging directory
+  whether or not the import succeeds, including if subcontainer creation fails. It fails
+  with an error if Maloja cannot identify the file; otherwise it returns the importer's
+  console report — ending with the counts of scrobbles imported and skipped
   — as a copyable text block with its ANSI colour codes stripped. One file per run: a
   Spotify history split across several files takes one run per file. Duration scales with
   the export; a small library is seconds, a large one minutes. Maloja de-duplicates on
