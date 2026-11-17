@@ -4,3 +4,8 @@ export const uiPort = 42010
 // The host id the 'ui' interface is bound under (see interfaces.ts). Exported
 // so dependent packages can resolve our bridge address without hardcoding it.
 export const uiHostId = 'ui'
+
+// Staging directory for Import Scrobbles uploads, on the `main` volume. Not
+// Maloja's own `import` directory: Maloja re-imports everything in that one on
+// every start.
+export const uploadDir = 'upload'
